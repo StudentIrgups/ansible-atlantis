@@ -3,8 +3,8 @@
   hosts: localhost
   gather_facts: yes
   vars_files:
-    - /opt/atlantis/vars.yml
-    - /opt/atlantis/vault.yml
+    - ./vars.yml
+    - ./vault.yml
   
   tasks:
     - name: Создать директорию для манифестов
