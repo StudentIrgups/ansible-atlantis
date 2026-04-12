@@ -13,8 +13,6 @@ atlantis_resources:
   limits:
     memory: "2Gi"
     cpu: "1000m"
-ingress_enabled: true
-ingress_host: "111.88.240.223"
-ingress_class: "nginx"
+atlantis_nodeport: 32000
 
 

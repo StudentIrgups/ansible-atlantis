@@ -1,10 +1,10 @@
 ---
-- name: Deploy Atlantis to Kubernetes (без kubernetes.core)
+- name: Deploy Atlantis to Kubernetes (без Ingress, NodePort)
   hosts: localhost
   gather_facts: yes
   vars_files:
-    - ./vars.yml
-    - ./vault.yml
+    - /opt/atlantis/vars.yml
+    - /opt/atlantis/vault.yml
   
   tasks:
     - name: Создать директорию для манифестов
@@ -118,6 +118,8 @@
                     value: "{{ atlantis_port }}"
                   - name: ATLANTIS_DATA_DIR
                     value: /atlantis-data
+                  - name: ATLANTIS_ATLANTIS_URL
+                    value: "http://{{ atlantis_external_ip | default('localhost') }}:{{ atlantis_nodeport | default('31414') }}"
                   volumeMounts:
                   - name: data
                     mountPath: /atlantis-data
@@ -152,7 +154,7 @@
     - name: Применить deployment
       command: kubectl apply -f /tmp/atlantis-manifests/deployment.yaml
     
-    - name: Создать Service манифест
+    - name: Создать Service с NodePort
       copy:
         dest: /tmp/atlantis-manifests/service.yaml
         content: |
@@ -164,57 +166,18 @@
             labels:
               app: atlantis
           spec:
-            type: ClusterIP
+            type: NodePort
             ports:
             - name: web
               port: 80
               targetPort: {{ atlantis_port }}
+              nodePort: {{ atlantis_nodeport | default(31414) }}
               protocol: TCP
             selector:
               app: atlantis
     
     - name: Применить service
       command: kubectl apply -f /tmp/atlantis-manifests/service.yaml
-    
-    - name: Создать Ingress манифест
-      copy:
-        dest: /tmp/atlantis-manifests/ingress.yaml
-        content: |
-          apiVersion: networking.k8s.io/v1
-          kind: Ingress
-          metadata:
-            name: atlantis
-            namespace: {{ k8s_namespace }}
-            annotations:
-              nginx.ingress.kubernetes.io/ssl-redirect: "false"
-              nginx.ingress.kubernetes.io/proxy-body-size: "100m"
-              nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
-              nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
-          spec:
-            ingressClassName: {{ ingress_class }}
-            rules:
-            - host: {{ ingress_host }}
-              http:
-                paths:
-                - path: /
-                  pathType: Prefix
-                  backend:
-                    service:
-                      name: atlantis
-                      port:
-                        number: 80
-                - path: /events
-                  pathType: Prefix
-                  backend:
-                    service:
-                      name: atlantis
-                      port:
-                        number: 80
-      when: ingress_enabled | default(true)
-    
-    - name: Применить ingress
-      command: kubectl apply -f /tmp/atlantis-manifests/ingress.yaml
-      when: ingress_enabled | default(true)
     
     - name: Ожидание готовности подов
       command: kubectl wait --for=condition=ready pod -l app=atlantis -n {{ k8s_namespace }} --timeout=300s
@@ -225,20 +188,37 @@
       command: kubectl get pods -n {{ k8s_namespace }}
       register: pods_status
     
+    - name: Получить IP воркер ноды
+      command: kubectl get nodes -o wide --selector='!node-role.kubernetes.io/master' -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}'
+      register: worker_ip
+    
+    - name: Получить NodePort
+      command: kubectl get svc atlantis -n {{ k8s_namespace }} -o jsonpath='{.spec.ports[0].nodePort}'
+      register: nodeport
+    
     - name: Показать статус
       debug:
         var: pods_status.stdout_lines
     
-    - name: Вывести информацию
+    - name: Вывести информацию о доступе
       debug:
         msg: |
           ==================================================
           ✅ Atlantis успешно установлен!
           
-          Проверка:
-          kubectl get pods -n {{ k8s_namespace }}
+          Namespace: {{ k8s_namespace }}
+          
+          ДОСТУП К ATLANTIS:
+          URL: http://{{ worker_ip.stdout }}:{{ nodeport.stdout }}
+          Webhook URL: http://{{ worker_ip.stdout }}:{{ nodeport.stdout }}/events
+          
+          Проверка здоровья:
+          curl http://{{ worker_ip.stdout }}:{{ nodeport.stdout }}/healthz
+          
+          Просмотр логов:
           kubectl logs -f deployment/atlantis -n {{ k8s_namespace }}
           
-          Доступ через port-forward:
-          kubectl port-forward -n {{ k8s_namespace }} svc/atlantis 4141:80
+          Проброс порта (альтернативный доступ):
+          kubectl port-forward -n {{ k8s_namespace }} svc/atlantis 8080:80
+          Затем: http://localhost:8080
           ==================================================
