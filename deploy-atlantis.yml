@@ -380,8 +380,7 @@
                         name: atlantis-secrets
                         key: ATLANTIS_DB_PASSWORD
                   - name: ATLANTIS_REPO_ALLOWLIST
-                    value: |
-                      {{ atlantis_repo_allowlist | indent(20) }}
+                    value: "{{ atlantis_repo_allowlist | replace('\n', ' ') }}"
                   - name: ATLANTIS_PORT
                     value: "{{ atlantis_port }}"
                   volumeMounts:
