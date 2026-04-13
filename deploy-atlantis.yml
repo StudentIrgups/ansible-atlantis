@@ -430,7 +430,57 @@
     
     - name: Подождать создание сервиса
       pause:
-        seconds: 5              
+        seconds: 5    
+
+    # ============================================
+    # Автоматическая настройка репозитория
+    # ============================================
+    - name: Настроить GitHub репозиторий для Atlantis
+      block:
+        - name: Проверить существование atlantis.yaml
+          uri:
+            url: "https://api.github.com/repos/{{ atlantis_github_user }}/{{ github_repo }}/contents/atlantis.yaml"
+            method: GET
+            headers:
+              Authorization: "token {{ atlantis_github_token }}"
+            status_code: [200, 404]
+          register: check_file
+        
+        - name: Создать atlantis.yaml если не существует
+          uri:
+            url: "https://api.github.com/repos/{{ atlantis_github_user }}/{{ github_repo }}/contents/atlantis.yaml"
+            method: PUT
+            headers:
+              Authorization: "token {{ atlantis_github_token }}"
+            body:
+              message: "chore: Add Atlantis configuration"
+              content: "{{ atlantis_yaml_content | b64encode }}"
+              branch: "{{ github_branch | default('main') }}"
+            body_format: json
+          when: check_file.status == 404
+        
+        - name: Создать webhook для репозитория
+          uri:
+            url: "https://api.github.com/repos/{{ atlantis_github_user }}/{{ github_repo }}/hooks"
+            method: POST
+            headers:
+              Authorization: "token {{ atlantis_github_token }}"
+            body:
+              name: "web"
+              active: true
+              events:
+                - pull_request
+                - pull_request_review
+                - push
+                - issue_comment
+              config:
+                url: "{{ atlantis_webhook_url }}"
+                content_type: "json"
+                secret: "{{ atlantis_webhook_secret }}"
+                insecure_ssl: "1"
+            body_format: json
+          register: webhook_result
+          ignore_errors: yes                  
     
     # ============================================
     # Ожидание Atlantis
