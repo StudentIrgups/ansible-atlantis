@@ -288,6 +288,9 @@
                 workflow: default
                 allowed_overrides: [apply_requirements, workflow]
                 allow_custom_workflows: true
+                autoplan:
+                  enabled: true
+                  when_modified: ["*.tf", "*.tfvars", "*.hcl", "**/*.tf", "**/*.tfvars"]
     
     - name: Применить ConfigMap для Atlantis
       command: kubectl apply -f /tmp/atlantis-manifests/atlantis-configmap.yaml
