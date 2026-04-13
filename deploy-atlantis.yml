@@ -50,7 +50,7 @@
     
     - name: Создать секрет из файла SSH public key
       shell: |
-        kubectl create secret generic id-rsa \
+        kubectl create secret generic ssh-public-key \
           --namespace={{ k8s_namespace }} \
           --from-file=id_rsa.pub={{ ssh_public_key_path }} \
           --dry-run=client -o yaml | kubectl apply -f -
@@ -384,33 +384,50 @@
                   - name: ATLANTIS_PORT
                     value: "{{ atlantis_port }}"
                   volumeMounts:
-                  - name: yc-credentials
+                  # Yandex Cloud key
+                  - name: yandex-key-volume
                     mountPath: /home/atlantis/.yc
-                  - name: s3-credentials
+                    readOnly: true
+                  
+                  # S3 credentials
+                  - name: s3-key-volume
                     mountPath: /home/atlantis/.aws
-                  - name: id-rsa
+                    readOnly: true
+                  
+                  # SSH public key
+                  - name: pub-key-volume
                     mountPath: /home/atlantis/.ssh
-
+                    readOnly: true
+                  
+                  # Atlantis data
+                  - name: atlantis-data
+                    mountPath: /atlantis-data
+                
                 volumes:
-                  - name: yc-credentials
-                    secret:
-                      secretName: yc-credentials
-                      items:
-                        - key: auth-diplom.json
-                          path: auth-key-diplom.json
-                  - name: s3-credentials
-                    secret:
-                      secretName: s3-credentials
-                      items:
-                        - key: credentials
-                          path: credentials
-                  - name: id-rsa
-                    secret:
-                      secretName: id-rsa
-                      items:
-                        - key: id_rsa.pub
-                          path: id_rsa.pub
-    
+                # Yandex Cloud service account key
+                - name: yandex-key-volume
+                  secret:
+                    secretName: yandex-key-secret
+                    items:
+                    - key: key.json
+                      path: key.json
+                
+                # S3 credentials file
+                - name: s3-key-volume
+                  secret:
+                    secretName: s3-key-secret
+                    items:
+                    - key: credentials
+                      path: credentials
+                
+                # SSH public key
+                - name: pub-key-volume
+                  secret:
+                    secretName: pub-key-secret
+                    items:
+                    - key: id_rsa.pub
+                      path: id_rsa.pub            
+
     - name: Применить Atlantis deployment
       command: kubectl apply -f /tmp/atlantis-manifests/atlantis-deployment.yaml
 
