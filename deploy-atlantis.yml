@@ -406,7 +406,7 @@
                     secretName: yc-credentials
                     items:
                     - key: key.json
-                      path: key.json
+                      path: ~/.auth_key_diplom.json
                 
                 # S3 credentials file
                 - name: s3-key-volume
@@ -414,7 +414,7 @@
                     secretName: s3-credentials
                     items:
                     - key: credentials
-                      path: credentials
+                      path: ~/.credentials
                 
                 # SSH public key
                 - name: pub-key-volume
@@ -422,7 +422,7 @@
                     secretName: ssh-public-key
                     items:
                     - key: id_rsa.pub
-                      path: id_rsa.pub            
+                      path: .ssh/ssh-key-1756817743452.pub          
 
     - name: Применить Atlantis deployment
       command: kubectl apply -f /tmp/atlantis-manifests/atlantis-deployment.yaml
