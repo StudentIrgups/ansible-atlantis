@@ -1,3 +1,15 @@
 ---
-atlantis_github_token: ""
-atlantis_webhook_secret: "YOUR_WEBHOOK_SECRET"
+# GitHub
+atlantis_github_token: "ghp_xxxxxxxxxxxxxxxxxxxx"
+atlantis_webhook_secret: "your-webhook-secret"
+
+# MySQL
+mysql_root_password: "R00t_P@ssw0rd!"
+mysql_password: "Atl@nt1s_DB_P@ssw0rd!"
+
+# Yandex Cloud токен
+yc_token: "y0_xxxxxxxxxxxxxxxxxxxx"
+
+# S3 ключи
+s3_access_key: "YCAJxxxxxxxxxxxx"
+s3_secret_key: "YCMxxxxxxxxxxxx"

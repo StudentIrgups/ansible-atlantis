@@ -1,11 +1,15 @@
 ---
+# Kubernetes
 k8s_namespace: "atlantis"
-atlantis_replicas: 1
+
+# Atlantis
+atlantis_version: "v0.27.2"
 atlantis_image: "ghcr.io/runatlantis/atlantis:v0.27.2"
+atlantis_replicas: 1
 atlantis_port: 4141
-atlantis_github_user: "StudentIrgups"
-atlantis_repo_allowlist:  |
-  "github.com/StudentIrgups/diplom"
+atlantis_nodeport: 32000
+
+# Ресурсы
 atlantis_resources:
   requests:
     memory: "512Mi"
@@ -13,6 +17,26 @@ atlantis_resources:
   limits:
     memory: "2Gi"
     cpu: "1000m"
-atlantis_nodeport: 32000
 
+# GitHub
+atlantis_github_user: "StudentIrgups"
+atlantis_repo_allowlist: |
+  github.com/StudentIrgups/diplom
 
+# MySQL
+mysql_database: "atlantis"
+mysql_user: "atlantis"
+
+# Yandex Cloud (публичные ID)
+yc_cloud_id: "b1gxxxxxxxxxxxx"
+yc_folder_id: "b1gxxxxxxxxxxxx"
+
+# S3 (публичные)
+s3_bucket_name: "to-save-state"
+s3_endpoint: "storage.yandexcloud.net"
+
+# Пути к файлам кредов на бастионе
+yc_key_file_path: "/home/ubuntu/.authorized-key-diplom.json"
+s3_credentials_file_path: "/home/ubuntu/credentials"
+ssh_public_key_path: "/home/ubuntu/id_rsa.pub"
+#ssh_private_key_path: "/home/ubuntu/id_rsa"

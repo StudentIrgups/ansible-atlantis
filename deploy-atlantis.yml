@@ -1,5 +1,5 @@
 ---
-- name: Deploy Atlantis to Kubernetes (без Ingress, NodePort)
+- name: Deploy Atlantis to Kubernetes with MySQL and file-based credentials
   hosts: localhost
   gather_facts: yes
   vars_files:
@@ -12,7 +12,10 @@
         path: /tmp/atlantis-manifests
         state: directory
     
-    - name: Создать namespace манифест
+    # ============================================
+    # Namespace
+    # ============================================
+    - name: Создать namespace
       copy:
         dest: /tmp/atlantis-manifests/namespace.yaml
         content: |
@@ -24,9 +27,74 @@
     - name: Применить namespace
       command: kubectl apply -f /tmp/atlantis-manifests/namespace.yaml
     
-    - name: Создать secrets манифест
+    # ============================================
+    # Секреты из файлов
+    # ============================================
+    - name: Создать секрет из файла Yandex Cloud credentials
+      command: |
+        kubectl create secret generic yc-credentials \
+          --namespace={{ k8s_namespace }} \
+          --from-file=key.json={{ yc_key_file_path }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      no_log: true
+      ignore_errors: yes
+    
+    - name: Создать секрет из файла S3 credentials
+      command: |
+        kubectl create secret generic s3-credentials \
+          --namespace={{ k8s_namespace }} \
+          --from-file=credentials={{ s3_credentials_file_path }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      no_log: true
+      ignore_errors: yes
+    
+    - name: Создать секрет из файла SSH public key
+      command: |
+        kubectl create secret generic ssh-public-key \
+          --namespace={{ k8s_namespace }} \
+          --from-file=id_rsa.pub={{ ssh_public_key_path }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      no_log: true
+      ignore_errors: yes
+    
+#    - name: Создать секрет из файла SSH private key
+#      command: |
+#        kubectl create secret generic ssh-private-key \
+#          --namespace={{ k8s_namespace }} \
+#          --from-file=id_rsa={{ ssh_private_key_path }} \
+#          --dry-run=client -o yaml | kubectl apply -f -
+#      no_log: true
+#      ignore_errors: yes
+    
+    # ============================================
+    # MySQL Secrets
+    # ============================================
+    - name: Создать MySQL secrets
       copy:
-        dest: /tmp/atlantis-manifests/secrets.yaml
+        dest: /tmp/atlantis-manifests/mysql-secrets.yaml
+        content: |
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: mysql-secrets
+            namespace: {{ k8s_namespace }}
+          type: Opaque
+          stringData:
+            MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+            MYSQL_PASSWORD: "{{ mysql_password }}"
+            MYSQL_DATABASE: "{{ mysql_database }}"
+            MYSQL_USER: "{{ mysql_user }}"
+    
+    - name: Применить MySQL secrets
+      command: kubectl apply -f /tmp/atlantis-manifests/mysql-secrets.yaml
+      no_log: true
+    
+    # ============================================
+    # Atlantis Secrets (только GitHub)
+    # ============================================
+    - name: Создать Atlantis secrets
+      copy:
+        dest: /tmp/atlantis-manifests/atlantis-secrets.yaml
         content: |
           apiVersion: v1
           kind: Secret
@@ -37,14 +105,175 @@
           stringData:
             ATLANTIS_GH_TOKEN: "{{ atlantis_github_token }}"
             ATLANTIS_GH_WEBHOOK_SECRET: "{{ atlantis_webhook_secret }}"
+            ATLANTIS_DB_TYPE: "mysql"
+            ATLANTIS_DB_HOST: "mysql-service.{{ k8s_namespace }}.svc.cluster.local"
+            ATLANTIS_DB_PORT: "3306"
+            ATLANTIS_DB_NAME: "{{ mysql_database }}"
+            ATLANTIS_DB_USER: "{{ mysql_user }}"
+            ATLANTIS_DB_PASSWORD: "{{ mysql_password }}"
     
-    - name: Применить secrets
-      command: kubectl apply -f /tmp/atlantis-manifests/secrets.yaml
+    - name: Применить Atlantis secrets
+      command: kubectl apply -f /tmp/atlantis-manifests/atlantis-secrets.yaml
       no_log: true
     
-    - name: Создать ConfigMap манифест
+    # ============================================
+    # MySQL ConfigMap
+    # ============================================
+    - name: Создать MySQL ConfigMap
       copy:
-        dest: /tmp/atlantis-manifests/configmap.yaml
+        dest: /tmp/atlantis-manifests/mysql-configmap.yaml
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: mysql-config
+            namespace: {{ k8s_namespace }}
+          data:
+            my.cnf: |
+              [mysqld]
+              character-set-server=utf8mb4
+              collation-server=utf8mb4_unicode_ci
+              max_connections=200
+              max_allowed_packet=256M
+              innodb_buffer_pool_size=1G
+              innodb_log_file_size=256M
+              innodb_flush_log_at_trx_commit=2
+              innodb_file_per_table=1
+    
+    - name: Применить MySQL ConfigMap
+      command: kubectl apply -f /tmp/atlantis-manifests/mysql-configmap.yaml
+    
+    # ============================================
+    # MySQL StatefulSet
+    # ============================================
+    - name: Создать MySQL StatefulSet
+      copy:
+        dest: /tmp/atlantis-manifests/mysql-statefulset.yaml
+        content: |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: mysql
+            namespace: {{ k8s_namespace }}
+          spec:
+            clusterIP: None
+            ports:
+            - port: 3306
+              name: mysql
+            selector:
+              app: mysql
+          
+          ---
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: mysql
+            namespace: {{ k8s_namespace }}
+          spec:
+            serviceName: mysql
+            replicas: 1
+            selector:
+              matchLabels:
+                app: mysql
+            template:
+              metadata:
+                labels:
+                  app: mysql
+              spec:
+                containers:
+                - name: mysql
+                  image: mysql:8.0
+                  args:
+                    - --default-authentication-plugin=mysql_native_password
+                  env:
+                  - name: MYSQL_ROOT_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: mysql-secrets
+                        key: MYSQL_ROOT_PASSWORD
+                  - name: MYSQL_DATABASE
+                    valueFrom:
+                      secretKeyRef:
+                        name: mysql-secrets
+                        key: MYSQL_DATABASE
+                  - name: MYSQL_USER
+                    valueFrom:
+                      secretKeyRef:
+                        name: mysql-secrets
+                        key: MYSQL_USER
+                  - name: MYSQL_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: mysql-secrets
+                        key: MYSQL_PASSWORD
+                  ports:
+                  - containerPort: 3306
+                    name: mysql
+                  volumeMounts:
+                  - name: mysql-data
+                    mountPath: /var/lib/mysql
+                  - name: mysql-config
+                    mountPath: /etc/mysql/conf.d
+                  resources:
+                    requests:
+                      memory: "512Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "2Gi"
+                      cpu: "1000m"
+                volumes:
+                - name: mysql-config
+                  configMap:
+                    name: mysql-config
+            volumeClaimTemplates:
+            - metadata:
+                name: mysql-data
+              spec:
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 20Gi
+    
+    - name: Применить MySQL StatefulSet
+      command: kubectl apply -f /tmp/atlantis-manifests/mysql-statefulset.yaml
+    
+    # ============================================
+    # MySQL Service
+    # ============================================
+    - name: Создать MySQL Service
+      copy:
+        dest: /tmp/atlantis-manifests/mysql-service.yaml
+        content: |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: mysql-service
+            namespace: {{ k8s_namespace }}
+          spec:
+            type: ClusterIP
+            ports:
+            - port: 3306
+              targetPort: 3306
+            selector:
+              app: mysql
+    
+    - name: Применить MySQL Service
+      command: kubectl apply -f /tmp/atlantis-manifests/mysql-service.yaml
+    
+    # ============================================
+    # Ожидание MySQL
+    # ============================================
+    - name: Ожидание готовности MySQL
+      command: kubectl wait --for=condition=ready pod -l app=mysql -n {{ k8s_namespace }} --timeout=300s
+      register: mysql_wait
+      failed_when: mysql_wait.rc != 0
+    
+    # ============================================
+    # Atlantis ConfigMap
+    # ============================================
+    - name: Создать ConfigMap для Atlantis
+      copy:
+        dest: /tmp/atlantis-manifests/atlantis-configmap.yaml
         content: |
           apiVersion: v1
           kind: ConfigMap
@@ -57,19 +286,37 @@
               - id: /.*/
                 apply_requirements: [mergeable, approved]
                 workflow: default
+                allowed_overrides: [apply_requirements, workflow]
+                allow_custom_workflows: true
     
-    - name: Применить ConfigMap
-      command: kubectl apply -f /tmp/atlantis-manifests/configmap.yaml
+    - name: Применить ConfigMap для Atlantis
+      command: kubectl apply -f /tmp/atlantis-manifests/atlantis-configmap.yaml
     
-    - name: Создать ServiceAccount и Deployment манифест
+    # ============================================
+    # Atlantis Deployment
+    # ============================================
+    - name: Создать Atlantis Deployment
       copy:
-        dest: /tmp/atlantis-manifests/deployment.yaml
+        dest: /tmp/atlantis-manifests/atlantis-deployment.yaml
         content: |
           apiVersion: v1
           kind: ServiceAccount
           metadata:
             name: atlantis
             namespace: {{ k8s_namespace }}
+          
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: atlantis-data
+            namespace: {{ k8s_namespace }}
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
           
           ---
           apiVersion: apps/v1
@@ -90,6 +337,25 @@
                   app: atlantis
               spec:
                 serviceAccountName: atlantis
+                initContainers:
+                - name: wait-for-mysql
+                  image: mysql:8.0
+                  command:
+                  - sh
+                  - -c
+                  - |
+                    until mysql -h mysql-service -u root -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do
+                      echo "Waiting for MySQL...";
+                      sleep 5;
+                    done;
+                    echo "MySQL is ready!";
+                  env:
+                  - name: MYSQL_ROOT_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: mysql-secrets
+                        key: MYSQL_ROOT_PASSWORD
+                
                 containers:
                 - name: atlantis
                   image: {{ atlantis_image }}
@@ -99,32 +365,95 @@
                     containerPort: {{ atlantis_port }}
                     protocol: TCP
                   env:
-                  - name: ATLANTIS_GH_USER
-                    value: "{{ atlantis_github_user }}"
-                  - name: ATLANTIS_GH_TOKEN
-                    valueFrom:
-                      secretKeyRef:
-                        name: atlantis-secrets
-                        key: ATLANTIS_GH_TOKEN
-                  - name: ATLANTIS_GH_WEBHOOK_SECRET
-                    valueFrom:
-                      secretKeyRef:
-                        name: atlantis-secrets
-                        key: ATLANTIS_GH_WEBHOOK_SECRET
-                  - name: ATLANTIS_REPO_ALLOWLIST
-                    value: |
-                      {{ atlantis_repo_allowlist | indent(22) }}
-                  - name: ATLANTIS_PORT
-                    value: "{{ atlantis_port }}"
-                  - name: ATLANTIS_DATA_DIR
-                    value: /atlantis-data
-                  - name: ATLANTIS_ATLANTIS_URL
-                    value: "http://{{ atlantis_external_ip | default('localhost') }}:{{ atlantis_nodeport | default('31414') }}"
+                    # GitHub
+                    - name: ATLANTIS_GH_USER
+                      value: "{{ atlantis_github_user }}"
+                    - name: ATLANTIS_GH_TOKEN
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_GH_TOKEN
+                    - name: ATLANTIS_GH_WEBHOOK_SECRET
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_GH_WEBHOOK_SECRET
+                    
+                    # Yandex Cloud (переменные для Terraform)
+                    - name: YC_TOKEN
+                      value: "{{ yc_token }}"
+                    - name: YC_CLOUD_ID
+                      value: "{{ yc_cloud_id }}"
+                    - name: YC_FOLDER_ID
+                      value: "{{ yc_folder_id }}"
+                    
+                    # AWS S3 (переменные для Terraform)
+                    - name: AWS_ACCESS_KEY_ID
+                      value: "{{ s3_access_key }}"
+                    - name: AWS_SECRET_ACCESS_KEY
+                      value: "{{ s3_secret_key }}"
+                    - name: AWS_ENDPOINT_URL
+                      value: "{{ s3_endpoint }}"
+                    
+                    # MySQL Database
+                    - name: ATLANTIS_DB_TYPE
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_DB_TYPE
+                    - name: ATLANTIS_DB_HOST
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_DB_HOST
+                    - name: ATLANTIS_DB_PORT
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_DB_PORT
+                    - name: ATLANTIS_DB_NAME
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_DB_NAME
+                    - name: ATLANTIS_DB_USER
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_DB_USER
+                    - name: ATLANTIS_DB_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: atlantis-secrets
+                          key: ATLANTIS_DB_PASSWORD
+                    
+                    # Atlantis конфигурация
+                    - name: ATLANTIS_REPO_ALLOWLIST
+                      value: |
+                        {{ atlantis_repo_allowlist | indent(24) }}
+                    - name: ATLANTIS_PORT
+                      value: "{{ atlantis_port }}"
+                    - name: ATLANTIS_DATA_DIR
+                      value: /atlantis-data
+                    - name: ATLANTIS_REPO_CONFIG
+                      value: /etc/atlantis/repos.yaml
+                  
                   volumeMounts:
-                  - name: data
+                  - name: atlantis-data
                     mountPath: /atlantis-data
-                  - name: config
+                  - name: repo-config
                     mountPath: /etc/atlantis
+                  # Монтируем файлы кредов
+                  - name: yc-credentials
+                    mountPath: /home/atlantis/.yc
+                    readOnly: true
+                  - name: s3-credentials
+                    mountPath: /home/atlantis/.aws
+                    readOnly: true
+                  - name: ssh-keys
+                    mountPath: /home/atlantis/.ssh
+                    readOnly: true
+                  
                   resources:
                     requests:
                       memory: {{ atlantis_resources.requests.memory }}
@@ -132,63 +461,73 @@
                     limits:
                       memory: {{ atlantis_resources.limits.memory }}
                       cpu: {{ atlantis_resources.limits.cpu }}
+                  
                   livenessProbe:
                     httpGet:
                       path: /healthz
                       port: {{ atlantis_port }}
                     initialDelaySeconds: 30
                     periodSeconds: 10
+                  
                   readinessProbe:
                     httpGet:
                       path: /healthz
                       port: {{ atlantis_port }}
                     initialDelaySeconds: 10
                     periodSeconds: 5
+                
                 volumes:
-                - name: data
-                  emptyDir: {}
-                - name: config
+                - name: atlantis-data
+                  persistentVolumeClaim:
+                    claimName: atlantis-data
+                - name: repo-config
                   configMap:
                     name: atlantis-repo-config
+                - name: yc-credentials
+                  secret:
+                    secretName: yc-credentials
+                - name: s3-credentials
+                  secret:
+                    secretName: s3-credentials
+                - name: ssh-keys
+                  secret:
+                    secretName: ssh-public-key
     
-    - name: Применить deployment
-      command: kubectl apply -f /tmp/atlantis-manifests/deployment.yaml
+    - name: Применить Atlantis deployment
+      command: kubectl apply -f /tmp/atlantis-manifests/atlantis-deployment.yaml
     
-    - name: Создать Service с NodePort
+    # ============================================
+    # Atlantis Service
+    # ============================================
+    - name: Создать Atlantis Service
       copy:
-        dest: /tmp/atlantis-manifests/service.yaml
+        dest: /tmp/atlantis-manifests/atlantis-service.yaml
         content: |
           apiVersion: v1
           kind: Service
           metadata:
             name: atlantis
             namespace: {{ k8s_namespace }}
-            labels:
-              app: atlantis
           spec:
             type: NodePort
             ports:
             - name: web
               port: 80
               targetPort: {{ atlantis_port }}
-              nodePort: {{ atlantis_nodeport | default(31414) }}
-              protocol: TCP
+              nodePort: {{ atlantis_nodeport | default(32000) }}
             selector:
               app: atlantis
     
-    - name: Применить service
-      command: kubectl apply -f /tmp/atlantis-manifests/service.yaml
+    - name: Применить Atlantis service
+      command: kubectl apply -f /tmp/atlantis-manifests/atlantis-service.yaml
     
-    - name: Ожидание готовности подов
+    # ============================================
+    # Ожидание Atlantis
+    # ============================================
+    - name: Ожидание готовности Atlantis
       command: kubectl wait --for=condition=ready pod -l app=atlantis -n {{ k8s_namespace }} --timeout=300s
-      register: wait_result
-      failed_when: wait_result.rc != 0
     
-    - name: Получить статус подов
-      command: kubectl get pods -n {{ k8s_namespace }}
-      register: pods_status
-    
-    - name: Получить IP воркер ноды
+    - name: Получить IP и порт
       command: kubectl get nodes -o wide --selector='!node-role.kubernetes.io/master' -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}'
       register: worker_ip
     
@@ -196,29 +535,16 @@
       command: kubectl get svc atlantis -n {{ k8s_namespace }} -o jsonpath='{.spec.ports[0].nodePort}'
       register: nodeport
     
-    - name: Показать статус
-      debug:
-        var: pods_status.stdout_lines
-    
-    - name: Вывести информацию о доступе
+    - name: Вывести информацию
       debug:
         msg: |
           ==================================================
-          ✅ Atlantis успешно установлен!
+          ✅ Atlantis установлен с файловыми кредами!
           
-          Namespace: {{ k8s_namespace }}
-          
-          ДОСТУП К ATLANTIS:
           URL: http://{{ worker_ip.stdout }}:{{ nodeport.stdout }}
-          Webhook URL: http://{{ worker_ip.stdout }}:{{ nodeport.stdout }}/events
           
-          Проверка здоровья:
-          curl http://{{ worker_ip.stdout }}:{{ nodeport.stdout }}/healthz
-          
-          Просмотр логов:
-          kubectl logs -f deployment/atlantis -n {{ k8s_namespace }}
-          
-          Проброс порта (альтернативный доступ):
-          kubectl port-forward -n {{ k8s_namespace }} svc/atlantis 8080:80
-          Затем: http://localhost:8080
+          Файлы кредов смонтированы:
+          - Yandex Cloud: /home/atlantis/.yc/key.json
+          - S3: /home/atlantis/.aws/credentials
+          - SSH: /home/atlantis/.ssh/id_rsa.pub
           ==================================================
