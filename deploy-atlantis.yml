@@ -50,7 +50,7 @@
     
     - name: Создать секрет из файла SSH public key
       shell: |
-        kubectl create secret generic ssh-public-key \
+        kubectl create secret generic id_rsa \
           --namespace={{ k8s_namespace }} \
           --from-file=id_rsa.pub={{ ssh_public_key_path }} \
           --dry-run=client -o yaml | kubectl apply -f -
@@ -390,17 +390,26 @@
                     mountPath: /home/atlantis/.aws
                   - name: ssh-keys
                     mountPath: /home/atlantis/.ssh
-                
+
                 volumes:
-                - name: yc-credentials
-                  secret:
-                    secretName: yc-credentials
-                - name: s3-credentials
-                  secret:
-                    secretName: s3-credentials
-                - name: ssh-keys
-                  secret:
-                    secretName: ssh-public-key
+                  - name: yc-credentials
+                    secret:
+                      secretName: yc-credentials
+                      items:
+                        - key: auth-diplom.json
+                          path: .auth-key-diplom.json
+                  - name: s3-credentials
+                    secret:
+                      secretName: s3-credentials
+                      items:
+                        - key: credentials
+                          path: .credentials
+                  - name: id_rsa
+                    secret:
+                      secretName: id_rsa
+                      items:
+                        - key: id_rsa.pub
+                          path: id_rsa.pub
     
     - name: Применить Atlantis deployment
       command: kubectl apply -f /tmp/atlantis-manifests/atlantis-deployment.yaml

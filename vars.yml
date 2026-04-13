@@ -45,7 +45,7 @@ yc_folder_id: "b1gxxxxxxxxxxxx"
 
 # S3 (публичные)
 s3_bucket_name: "to-save-state"
-s3_endpoint: "storage.yandexcloud.net"
+s3_endpoint: "https://storage.yandexcloud.net"
 
 # Пути к файлам кредов на бастионе
 yc_key_file_path: "/home/ubuntu/authorized-key-diplom.json"
