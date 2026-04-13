@@ -53,3 +53,6 @@ ssh_public_key_path: "/home/ubuntu/id_rsa.pub"
 #ssh_private_key_path: "/home/ubuntu/id_rsa"
 
 terraformrc_file_path: "/home/ubuntu/.terraformrc"
+
+cloud_id: "b1ggcn8va1l6908f7dkp"
+folder_id: "b1g979msp4t7ort8en3e"
