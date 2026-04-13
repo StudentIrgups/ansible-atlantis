@@ -403,7 +403,7 @@
                 # Yandex Cloud service account key
                 - name: yandex-key-volume
                   secret:
-                    secretName: yandex-key-secret
+                    secretName: yc-credentials
                     items:
                     - key: key.json
                       path: key.json
@@ -411,7 +411,7 @@
                 # S3 credentials file
                 - name: s3-key-volume
                   secret:
-                    secretName: s3-key-secret
+                    secretName: s3-credentials
                     items:
                     - key: credentials
                       path: credentials
@@ -419,7 +419,7 @@
                 # SSH public key
                 - name: pub-key-volume
                   secret:
-                    secretName: pub-key-secret
+                    secretName: ssh-public-key
                     items:
                     - key: id_rsa.pub
                       path: id_rsa.pub            
