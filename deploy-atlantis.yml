@@ -402,11 +402,11 @@
                   - name: TF_CLI_CONFIG_FILE
                     value: "/home/atlantis/.terraformrc"        
                   - name: TF_VAR_yc_cloud_id 
-                    value: {{ cloud_id}}
+                    value: {{ cloud_id }}
                   - name: TF_VAR_yc_folder_id
-                    value: {{ folder_id}}
+                    value: {{ folder_id }}
                   - name: TF_VAR_url
-                    value: {{ atlantis_webhook_url }
+                    value: {{ atlantis_webhook_url }}
                   - name: TF_VAR_username
                     value: {{ atlantis_github_user }}
                   - name: TF_VAR_repo_github
