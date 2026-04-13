@@ -457,7 +457,7 @@
               content: "{{ atlantis_yaml_content | b64encode }}"
               branch: "{{ github_branch | default('main') }}"
             body_format: json
-            status_code: [200, 201]  # ← Добавить 201
+            status_code: [200, 201] 
           when: check_file.status == 404
         
         - name: Создать webhook для репозитория
