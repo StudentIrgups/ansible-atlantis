@@ -294,6 +294,22 @@
     
     - name: Применить ConfigMap для Atlantis
       command: kubectl apply -f /tmp/atlantis-manifests/atlantis-configmap.yaml
+
+    - name: Создать ConfigMap для Terraform
+      copy:
+        dest: /tmp/atlantis-manifests/terraform-configmap.yaml
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: atlantis-terraformrc
+            namespace: {{ k8s_namespace }}
+          data:
+            terraformrc: |
+              {{ lookup('file', terraformrc_file_path) | indent(10) }}
+
+    - name: Применить ConfigMap
+      command: kubectl apply -f /tmp/atlantis-manifests/terraform-configmap.yaml      
     
     # ============================================
     # Atlantis Deployment
@@ -398,7 +414,11 @@
                   - name: pub-key-volume
                     mountPath: /home/atlantis/.ssh
                     readOnly: true
-                
+
+                  - name: terraformrc
+                    mountPath: /home/atlantis/terraform
+                    readOnly: true
+                                  
                 volumes:
                 # Yandex Cloud service account key
                 - name: yandex-key-volume
@@ -422,7 +442,14 @@
                     secretName: ssh-public-key
                     items:
                     - key: id_rsa.pub
-                      path: ssh-key-1756817743452.pub          
+                      path: ssh-key-1756817743452.pub   
+
+                - name: terraformrc
+                  configMap:
+                    name: atlantis-terraformrc
+                    items:
+                    - key: terraformrc
+                      path: .terraformrc       
 
     - name: Применить Atlantis deployment
       command: kubectl apply -f /tmp/atlantis-manifests/atlantis-deployment.yaml
