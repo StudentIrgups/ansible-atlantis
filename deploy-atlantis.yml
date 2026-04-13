@@ -388,7 +388,7 @@
                     mountPath: /home/atlantis/.yc
                   - name: s3-credentials
                     mountPath: /home/atlantis/.aws
-                  - name: ssh-keys
+                  - name: id-rsa
                     mountPath: /home/atlantis/.ssh
 
                 volumes:
