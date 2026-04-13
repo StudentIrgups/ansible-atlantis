@@ -386,12 +386,12 @@
                   volumeMounts:
                   # Yandex Cloud key
                   - name: yandex-key-volume
-                    mountPath: /home/atlantis/
+                    mountPath: /home/atlantis/.yc
                     readOnly: true
                   
                   # S3 credentials
                   - name: s3-key-volume
-                    mountPath: /home/atlantis/
+                    mountPath: /home/atlantis/.aws
                     readOnly: true
                   
                   # SSH public key
