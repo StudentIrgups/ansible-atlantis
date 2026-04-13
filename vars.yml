@@ -3,7 +3,7 @@
 k8s_namespace: "atlantis"
 
 # Atlantis
-atlantis_version: "v0.27.2"
+#atlantis_version: "v0.27.2"
 atlantis_image: "ghcr.io/runatlantis/atlantis:latest"
 atlantis_replicas: 1
 atlantis_port: 4141
