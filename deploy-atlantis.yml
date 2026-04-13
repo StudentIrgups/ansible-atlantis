@@ -397,13 +397,13 @@
                       secretName: yc-credentials
                       items:
                         - key: auth-diplom.json
-                          path: .auth-key-diplom.json
+                          path: auth-key-diplom.json
                   - name: s3-credentials
                     secret:
                       secretName: s3-credentials
                       items:
                         - key: credentials
-                          path: .credentials
+                          path: credentials
                   - name: id-rsa
                     secret:
                       secretName: id-rsa
