@@ -50,7 +50,7 @@
     
     - name: Создать секрет из файла SSH public key
       shell: |
-        kubectl create secret generic id_rsa \
+        kubectl create secret generic id-rsa \
           --namespace={{ k8s_namespace }} \
           --from-file=id_rsa.pub={{ ssh_public_key_path }} \
           --dry-run=client -o yaml | kubectl apply -f -
@@ -404,9 +404,9 @@
                       items:
                         - key: credentials
                           path: .credentials
-                  - name: id_rsa
+                  - name: id-rsa
                     secret:
-                      secretName: id_rsa
+                      secretName: id-rsa
                       items:
                         - key: id_rsa.pub
                           path: id_rsa.pub
