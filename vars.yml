@@ -24,6 +24,15 @@ atlantis_repo_allowlist: |
   github.com/StudentIrgups/diplom
 github_repo: "diplom"  
 atlantis_webhook_url: "http://93.77.184.255:83/events"
+atlantis_yaml_content: |
+  version: 3
+  projects:
+  - name: default
+    dir: .
+    workflow: default
+    autoplan:
+      enabled: true
+      when_modified: ["*.tf", "*.tfvars", "*.hcl"]
 
 
 # MySQL
