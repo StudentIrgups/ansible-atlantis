@@ -31,31 +31,31 @@
     # Секреты из файлов
     # ============================================
     - name: Создать секрет из файла Yandex Cloud credentials
-      command: |
+      shell: |
         kubectl create secret generic yc-credentials \
           --namespace={{ k8s_namespace }} \
           --from-file=key.json={{ yc_key_file_path }} \
           --dry-run=client -o yaml | kubectl apply -f -
-      no_log: true
-      ignore_errors: yes
+#      no_log: true
+#      ignore_errors: yes
     
     - name: Создать секрет из файла S3 credentials
-      command: |
+      shell: |
         kubectl create secret generic s3-credentials \
           --namespace={{ k8s_namespace }} \
           --from-file=credentials={{ s3_credentials_file_path }} \
           --dry-run=client -o yaml | kubectl apply -f -
-      no_log: true
-      ignore_errors: yes
+#      no_log: true
+#      ignore_errors: yes
     
     - name: Создать секрет из файла SSH public key
-      command: |
+      shell: |
         kubectl create secret generic ssh-public-key \
           --namespace={{ k8s_namespace }} \
           --from-file=id_rsa.pub={{ ssh_public_key_path }} \
           --dry-run=client -o yaml | kubectl apply -f -
-      no_log: true
-      ignore_errors: yes
+#      no_log: true
+#      ignore_errors: yes
     
 #    - name: Создать секрет из файла SSH private key
 #      command: |
