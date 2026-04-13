@@ -36,7 +36,7 @@ s3_bucket_name: "to-save-state"
 s3_endpoint: "storage.yandexcloud.net"
 
 # Пути к файлам кредов на бастионе
-yc_key_file_path: "/home/ubuntu/.authorized-key-diplom.json"
+yc_key_file_path: "/home/ubuntu/authorized-key-diplom.json"
 s3_credentials_file_path: "/home/ubuntu/credentials"
 ssh_public_key_path: "/home/ubuntu/id_rsa.pub"
 #ssh_private_key_path: "/home/ubuntu/id_rsa"
