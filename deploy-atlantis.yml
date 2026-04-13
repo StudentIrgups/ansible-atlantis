@@ -399,6 +399,8 @@
                     value: "{{ atlantis_repo_allowlist | replace('\n', ' ') }}"
                   - name: ATLANTIS_PORT
                     value: "{{ atlantis_port }}"
+                  - name: TF_CLI_CONFIG_FILE
+                    value: "/home/atlantis/.terraformrc"                    
                   volumeMounts:
                   # Yandex Cloud key
                   - name: yandex-key-volume
@@ -414,11 +416,12 @@
                   - name: pub-key-volume
                     mountPath: /home/atlantis/.ssh
                     readOnly: true
-
+                  
                   - name: terraformrc
-                    mountPath: /home/atlantis/
+                    mountPath: /home/atlantis/.terraformrc
+                    subPath: terraformrc
                     readOnly: true
-                                  
+
                 volumes:
                 # Yandex Cloud service account key
                 - name: yandex-key-volume
@@ -447,6 +450,9 @@
                 - name: terraformrc
                   configMap:
                     name: atlantis-terraformrc
+                    items:
+                    - key: terraformrc
+                      path: terraformrc
 
     - name: Применить Atlantis deployment
       command: kubectl apply -f /tmp/atlantis-manifests/atlantis-deployment.yaml
