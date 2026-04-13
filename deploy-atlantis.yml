@@ -398,10 +398,6 @@
                   - name: pub-key-volume
                     mountPath: /home/atlantis/.ssh
                     readOnly: true
-                  
-                  # Atlantis data
-                  - name: atlantis-data
-                    mountPath: /atlantis-data
                 
                 volumes:
                 # Yandex Cloud service account key
