@@ -21,7 +21,7 @@ atlantis_resources:
 # GitHub
 atlantis_github_user: "StudentIrgups"
 atlantis_repo_allowlist: |
-  github.com/StudentIrgups/diplom
+  github.com/StudentIrgups/diplom/*
 github_repo: "diplom"  
 atlantis_webhook_url: "http://93.77.184.255:83/events"
 atlantis_yaml_content: |
