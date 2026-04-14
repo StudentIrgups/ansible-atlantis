@@ -156,7 +156,6 @@
             name: mysql
             namespace: {{ k8s_namespace }}
           spec:
-            clusterIP: None
             ports:
             - port: 3306
               name: mysql
