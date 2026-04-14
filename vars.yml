@@ -1,9 +1,9 @@
 ---
+ip_bastion: ""
 # Kubernetes
 k8s_namespace: "atlantis"
 
 # Atlantis
-#atlantis_version: "v0.27.2"
 atlantis_image: "ghcr.io/runatlantis/atlantis:latest"
 atlantis_replicas: 1
 atlantis_port: 4141
@@ -19,10 +19,10 @@ atlantis_resources:
     cpu: "1000m"
 
 # GitHub
-atlantis_github_user: "StudentIrgups"
-atlantis_repo_allowlist: "github.com/StudentIrgups/diplom"
+atlantis_github_user: "username"
+atlantis_repo_allowlist: "github.com/username/repo"
 github_repo: "diplom"  
-atlantis_webhook_url: "http://93.77.184.255:83/events"
+atlantis_webhook_url: "http://externalIp:AtlantisPort/events"
 atlantis_yaml_content: |
   version: 3
   projects:
@@ -33,26 +33,21 @@ atlantis_yaml_content: |
       enabled: true
       when_modified: ["*.tf", "*.tfvars", "*.hcl"]
 
-
 # MySQL
 mysql_database: "atlantis"
 mysql_user: "atlantis"
 
-# Yandex Cloud (публичные ID)
-yc_cloud_id: "b1gxxxxxxxxxxxx"
-yc_folder_id: "b1gxxxxxxxxxxxx"
-
 # S3 (публичные)
-s3_bucket_name: "to-save-state"
+s3_bucket_name: "bucket"
 s3_endpoint: "https://storage.yandexcloud.net"
 
 # Пути к файлам кредов на бастионе
-yc_key_file_path: "/home/ubuntu/authorized-key-diplom.json"
-s3_credentials_file_path: "/home/ubuntu/credentials"
-ssh_public_key_path: "/home/ubuntu/id_rsa.pub"
-#ssh_private_key_path: "/home/ubuntu/id_rsa"
+yc_key_file_path: "/home/localuser/authorized-key.json"
+s3_credentials_file_path: "/home/localuser/credentials"
+ssh_public_key_path: "/home/localuser/id_rsa.pub"
 
-terraformrc_file_path: "/home/ubuntu/.terraformrc"
+terraformrc_file_path: "/home/localuser/.terraformrc"
 
-cloud_id: "b1ggcn8va1l6908f7dkp"
-folder_id: "b1g979msp4t7ort8en3e"
+# Yandex Cloud (публичные ID)
+cloud_id: "b1ggcxxxxxxxxxxxxx"
+folder_id: "b1gxxxxxxxxxxxxxxxxx"
