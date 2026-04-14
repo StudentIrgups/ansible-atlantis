@@ -402,6 +402,10 @@
                     value: {{ atlantis_github_user }}
                   - name: TF_VAR_atlantis_repo_allowlist
                     value: {{ atlantis_repo_allowlist }}
+                  - name: TF_VAR_atlantis_github_token
+                    value: {{ atlantis_github_token }}
+                  - name: TF_VAR_atlantis_webhook_secret
+                    value: {{ atlantis_webhook_secret }}                                        
 
                   volumeMounts:
                   # Yandex Cloud key
