@@ -386,26 +386,26 @@
                       secretKeyRef:
                         name: atlantis-secrets
                         key: ATLANTIS_DB_PASSWORD
-                - name: ATLANTIS_REPO_ALLOWLIST
-                  value: "{{ atlantis_repo_allowlist | replace('\n', ' ') }}"
-                - name: ATLANTIS_PORT
-                  value: "{{ atlantis_port }}"
-                - name: TF_CLI_CONFIG_FILE
-                  value: "/home/atlantis/.terraformrc"
-                - name: TF_VAR_cloud_id
-                  value: "{{ cloud_id }}"
-                - name: TF_VAR_folder_id
-                  value: "{{ folder_id }}"
-                - name: TF_VAR_url
-                  value: "{{ atlantis_webhook_url }}"
-                - name: TF_VAR_atlantis_github_user
-                  value: "{{ atlantis_github_user }}"
-                - name: TF_VAR_atlantis_repo_allowlist
-                  value: "{{ atlantis_repo_allowlist | replace('\n', ' ') }}"
-                - name: TF_VAR_atlantis_github_token
-                  value: "{{ atlantis_github_token }}"
-                - name: TF_VAR_atlantis_webhook_secret
-                  value: "{{ atlantis_webhook_secret }}"
+                  - name: ATLANTIS_REPO_ALLOWLIST
+                    value: "{{ atlantis_repo_allowlist | replace('\n', ' ') }}"
+                  - name: ATLANTIS_PORT
+                    value: "{{ atlantis_port }}"
+                  - name: TF_CLI_CONFIG_FILE
+                    value: "/home/atlantis/.terraformrc"
+                  - name: TF_VAR_cloud_id
+                    value: "{{ cloud_id }}"
+                  - name: TF_VAR_folder_id
+                    value: "{{ folder_id }}"
+                  - name: TF_VAR_url
+                    value: "{{ atlantis_webhook_url }}"
+                  - name: TF_VAR_atlantis_github_user
+                    value: "{{ atlantis_github_user }}"
+                  - name: TF_VAR_atlantis_repo_allowlist
+                    value: "{{ atlantis_repo_allowlist | replace('\n', ' ') }}"
+                  - name: TF_VAR_atlantis_github_token
+                    value: "{{ atlantis_github_token }}"
+                  - name: TF_VAR_atlantis_webhook_secret
+                    value: "{{ atlantis_webhook_secret }}"
 
                   volumeMounts:
                   # Yandex Cloud key
