@@ -146,7 +146,7 @@
     # ============================================
     # MySQL StatefulSet
     # ============================================
-    - name: Создать MySQL StatefulSet
+    - name: Создать MySQL StatefulSet (emptyDir)
       copy:
         dest: /tmp/atlantis-manifests/mysql-statefulset.yaml
         content: |
@@ -165,12 +165,13 @@
           
           ---
           apiVersion: apps/v1
-          kind: StatefulSet
+          kind: Deployment
           metadata:
             name: mysql
             namespace: {{ k8s_namespace }}
+            labels:
+              app: mysql
           spec:
-            serviceName: mysql
             replicas: 1
             selector:
               matchLabels:
@@ -222,17 +223,11 @@
                       memory: "2Gi"
                       cpu: "1000m"
                 volumes:
+                - name: mysql-data
+                  emptyDir: {}
                 - name: mysql-config
                   configMap:
                     name: mysql-config
-            volumeClaimTemplates:
-            - metadata:
-                name: mysql-data
-              spec:
-                accessModes: ["ReadWriteOnce"]
-                resources:
-                  requests:
-                    storage: 20Gi
     
     - name: Применить MySQL StatefulSet
       command: kubectl apply -f /tmp/atlantis-manifests/mysql-statefulset.yaml
