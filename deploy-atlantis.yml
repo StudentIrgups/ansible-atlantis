@@ -406,6 +406,8 @@
                     value: "{{ atlantis_github_token }}"
                   - name: TF_VAR_atlantis_webhook_secret
                     value: "{{ atlantis_webhook_secret }}"
+                  - name: TF_VAR_dockerhub_token
+                    value: "{{ dockerhub_token }}"
 
                   volumeMounts:
                   # Yandex Cloud key

@@ -6,3 +6,6 @@ atlantis_webhook_secret: "your-webhook-secret"
 # MySQL
 mysql_root_password: "R00t_P@ssw0rd!"
 mysql_password: "Atl@nt1s_DB_P@ssw0rd!"
+
+#DockerHub
+dockerhub_token: "dckrXXXxxxxxxxxxxxxxxxxx"
