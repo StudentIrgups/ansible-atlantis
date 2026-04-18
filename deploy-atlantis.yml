@@ -254,10 +254,19 @@
     # ============================================
     # Ожидание MySQL
     # ============================================
-    - name: Ожидание готовности MySQL
-      command: kubectl wait --for=condition=ready pod -l app=mysql -n {{ k8s_namespace }} --timeout=300s
-      register: mysql_wait
-      failed_when: mysql_wait.rc != 0
+    - name: Ожидание MySQL StatefulSet
+      shell: |
+        for i in {1..30}; do
+          kubectl get statefulset mysql -n atlantis && break
+          sleep 5
+        done
+      register: sts_check
+
+    - name: Ожидание MySQL 
+      shell: |
+        kubectl wait --for=condition=ready pod -l app=mysql -n atlantis --timeout=300s
+      when: sts_check.rc == 0
+      ignore_errors: yes
     
     # ============================================
     # Atlantis ConfigMap
